@@ -1,5 +1,6 @@
 import { Music } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AudioPadData } from '../types/audio';
 
 interface AudioPadProps {
@@ -15,11 +16,14 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onD
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef<boolean>(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const handleMouseDown = () => {
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
-      setMenuOpen(true);
+      openMenu();
       longPressTimer.current = null;
     }, 500);
   };
@@ -49,9 +53,35 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onD
   const handleTouchStart = () => {
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
-      setMenuOpen(true);
+      openMenu();
       longPressTimer.current = null;
     }, 500);
+  };
+
+  const openMenu = () => {
+    setMenuOpen(true);
+    // compute position next tick
+    requestAnimationFrame(() => {
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const menuWidth = 144; // matches w-36 (~9rem)
+      const padding = 8;
+      let left = Math.round(rect.left + window.scrollX + rect.width - menuWidth);
+      let top = Math.round(rect.top + window.scrollY + padding);
+      // clamp to viewport
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+      if (left + menuWidth + 8 > window.scrollX + vw) left = Math.max(window.scrollX + 8, window.scrollX + vw - menuWidth - 8);
+      if (left < window.scrollX + 8) left = window.scrollX + 8;
+      if (top + 40 > window.scrollY + vh) top = Math.max(window.scrollY + 8, window.scrollY + vh - 48);
+      setMenuPos({ top, left });
+    });
+  };
+
+  const closeMenu = () => {
+    setMenuOpen(false);
+    setMenuPos(null);
   };
 
   const handleTouchEnd = () => {
@@ -70,12 +100,12 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onD
   };
 
   const handleDelete = () => {
-    setMenuOpen(false);
+    closeMenu();
     onDelete(pad.id);
   };
 
   const handleChooseFile = () => {
-    setMenuOpen(false);
+    closeMenu();
     fileInputRef.current?.click();
   };
 
@@ -84,12 +114,42 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onD
     return name.substring(0, 12) + '...';
   };
 
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onDocClick = (e: MouseEvent) => {
+      const menuEl = menuRef.current;
+      const btnEl = buttonRef.current;
+      if (!menuEl) return;
+      if (menuEl.contains(e.target as Node)) return;
+      if (btnEl && btnEl.contains(e.target as Node)) return;
+      closeMenu();
+    };
+
+    const onScroll = () => closeMenu();
+    const onResize = () => closeMenu();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeMenu(); };
+
+    document.addEventListener('mousedown', onDocClick);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    document.addEventListener('keydown', onKey);
+
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
   return (
     <>
       <button
         className={`relative aspect-square rounded-2xl shadow-lg transition-all duration-200 active:scale-95 overflow-hidden ${pad.color} ${
           isPlaying ? 'ring-4 ring-white animate-pulse' : ''
         }`}
+        ref={buttonRef}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -109,13 +169,17 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onD
             </span>
           )}
         </div>
-          {menuOpen && (
-            <div className="absolute top-2 right-2 z-20">
+          {menuOpen && menuPos && createPortal(
+            <div
+              ref={menuRef}
+              style={{ position: 'absolute', top: menuPos.top + 'px', left: menuPos.left + 'px', zIndex: 10000 }}
+              aria-modal="false"
+            >
               <div className="bg-slate-800 text-white rounded-md shadow-lg py-1 w-36">
                 <button onClick={handleChooseFile} className="w-full text-left px-3 py-2 hover:bg-slate-700">Cargar audio</button>
                 <button onClick={handleDelete} className="w-full text-left px-3 py-2 hover:bg-slate-700">Borrar</button>
               </div>
-            </div>
+            </div>, document.body
           )}
       </button>
       <input
