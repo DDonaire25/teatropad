@@ -1,0 +1,6 @@
+{
+  "appId": "com.radiolibrevientosur.donairepad",
+  "appName": "Donaire Pad",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
