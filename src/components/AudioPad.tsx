@@ -1,5 +1,5 @@
 import { Music } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { AudioPadData } from '../types/audio';
 
 interface AudioPadProps {
@@ -7,15 +7,20 @@ interface AudioPadProps {
   isPlaying: boolean;
   onLoadAudio: (padId: number, file: File) => void;
   onPlayPause: (padId: number) => void;
+  onDelete: (padId: number) => void;
 }
 
-export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause }: AudioPadProps) {
+export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onDelete }: AudioPadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggered = useRef<boolean>(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleMouseDown = () => {
     longPressTimer.current = setTimeout(() => {
-      fileInputRef.current?.click();
+      longPressTriggered.current = true;
+      setMenuOpen(true);
+      longPressTimer.current = null;
     }, 500);
   };
 
@@ -30,14 +35,22 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause }: A
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
-    } else if (pad.audioUrl) {
-      onPlayPause(pad.id);
+      // normal click (no long press yet)
+      if (pad.audioUrl) onPlayPause(pad.id);
+    } else if (longPressTriggered.current) {
+      // long press already triggered and opened menu: consume click
+      longPressTriggered.current = false;
+      return;
+    } else {
+      if (pad.audioUrl) onPlayPause(pad.id);
     }
   };
 
   const handleTouchStart = () => {
     longPressTimer.current = setTimeout(() => {
-      fileInputRef.current?.click();
+      longPressTriggered.current = true;
+      setMenuOpen(true);
+      longPressTimer.current = null;
     }, 500);
   };
 
@@ -54,6 +67,16 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause }: A
       onLoadAudio(pad.id, file);
     }
     e.target.value = '';
+  };
+
+  const handleDelete = () => {
+    setMenuOpen(false);
+    onDelete(pad.id);
+  };
+
+  const handleChooseFile = () => {
+    setMenuOpen(false);
+    fileInputRef.current?.click();
   };
 
   const truncateFileName = (name: string) => {
@@ -86,6 +109,14 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause }: A
             </span>
           )}
         </div>
+          {menuOpen && (
+            <div className="absolute top-2 right-2 z-20">
+              <div className="bg-slate-800 text-white rounded-md shadow-lg py-1 w-36">
+                <button onClick={handleChooseFile} className="w-full text-left px-3 py-2 hover:bg-slate-700">Cargar audio</button>
+                <button onClick={handleDelete} className="w-full text-left px-3 py-2 hover:bg-slate-700">Borrar</button>
+              </div>
+            </div>
+          )}
       </button>
       <input
         ref={fileInputRef}

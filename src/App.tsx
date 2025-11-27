@@ -3,7 +3,7 @@ import { Music as MusicIcon } from 'lucide-react';
 import AudioPad from './components/AudioPad';
 import Player from './components/Player';
 import { AudioPadData, PlayingAudio } from './types/audio';
-import { savePad, getAllPads } from './lib/persistence';
+import { savePad, getAllPads, deletePad } from './lib/persistence';
 
 const GRADIENT_COLORS = [
   'bg-gradient-to-br from-pink-500 to-rose-600',
@@ -49,7 +49,8 @@ export default function App() {
   const [currentPanel, setCurrentPanel] = useState<number>(1);
   const [pads1, setPads1] = useState<AudioPadData[]>(() => defaultPads(0, GRADIENT_COLORS));
   const [pads2, setPads2] = useState<AudioPadData[]>(() => defaultPads(12, PANEL_2_COLORS));
-  const [playingAudio, setPlayingAudio] = useState<PlayingAudio | null>(null);
+  const [playingAudio1, setPlayingAudio1] = useState<PlayingAudio | null>(null);
+  const [playingAudio2, setPlayingAudio2] = useState<PlayingAudio | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const audioRefs = useRef<Map<number, HTMLAudioElement>>(new Map());
 
@@ -126,9 +127,63 @@ export default function App() {
     savePad(padId, file, file.name).catch((e) => console.error('persist error', e));
   };
 
+  const handleDeletePad = async (padId: number) => {
+    // stop audio if playing or referenced
+    const existingAudio = audioRefs.current.get(padId);
+    if (existingAudio) {
+      existingAudio.pause();
+      existingAudio.src = '';
+      audioRefs.current.delete(padId);
+    }
+
+    setPads1((prev) => {
+      if (padId < 12) {
+        const next = [...prev];
+        const idx = padId;
+        if (next[idx]?.audioUrl) {
+          try { URL.revokeObjectURL(next[idx].audioUrl!); } catch {}
+        }
+        next[idx] = { ...next[idx], file: null, fileName: null, audioUrl: null };
+        return next;
+      }
+      return prev;
+    });
+
+    setPads2((prev) => {
+      if (padId >= 12) {
+        const next = [...prev];
+        const idx = padId - 12;
+        if (next[idx]?.audioUrl) {
+          try { URL.revokeObjectURL(next[idx].audioUrl!); } catch {}
+        }
+        next[idx] = { ...next[idx], file: null, fileName: null, audioUrl: null };
+        return next;
+      }
+      return prev;
+    });
+
+    if (playingAudio1?.padId === padId) {
+      playingAudio1.audio.pause();
+      setPlayingAudio1(null);
+    }
+    if (playingAudio2?.padId === padId) {
+      playingAudio2.audio.pause();
+      setPlayingAudio2(null);
+    }
+
+    try {
+      await deletePad(padId);
+    } catch (e) {
+      console.warn('error deleting pad', e);
+    }
+  };
+
   const handlePlayPause = (padId: number) => {
-    const pad = pads.find((p) => p.id === padId);
+    const pad = pads1.concat(pads2).find((p) => p.id === padId);
     if (!pad || !pad.audioUrl) return;
+    const isPanel1 = padId < 12;
+    const playingAudio = isPanel1 ? playingAudio1 : playingAudio2;
+    const setPlaying = isPanel1 ? setPlayingAudio1 : setPlayingAudio2;
 
     if (playingAudio && playingAudio.padId !== padId) {
       playingAudio.audio.pause();
@@ -147,34 +202,51 @@ export default function App() {
       else audio.pause();
     } else {
       audio.play();
-      setPlayingAudio({ padId, audio });
+      setPlaying({ padId, audio });
     }
   };
 
-  const handleClosePlayer = () => {
-    if (!playingAudio) return;
-    playingAudio.audio.pause();
-    playingAudio.audio.currentTime = 0;
-    setPlayingAudio(null);
+  const handleClosePlayer = (panel: number) => {
+    if (panel === 1) {
+      if (!playingAudio1) return;
+      playingAudio1.audio.pause();
+      playingAudio1.audio.currentTime = 0;
+      setPlayingAudio1(null);
+    } else {
+      if (!playingAudio2) return;
+      playingAudio2.audio.pause();
+      playingAudio2.audio.currentTime = 0;
+      setPlayingAudio2(null);
+    }
   };
 
-  const currentPad = playingAudio ? pads.find((p) => p.id === playingAudio.padId) : null;
+  const currentPad1 = playingAudio1 ? pads1.find((p) => p.id === playingAudio1.padId) : null;
+  const currentPad2 = playingAudio2 ? pads2.find((p) => p.id === playingAudio2.padId) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-slate-900 to-slate-800 text-white px-4 py-8">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
-            <MusicIcon size={40} className="text-cyan-400" />
-            <h1 className="text-4xl font-bold">Donaire Play</h1>
+            <div className="flex items-center gap-3">
+              <MusicIcon size={40} className="text-cyan-400" />
+              <h1 className="text-4xl font-bold">Donaire Play</h1>
+            </div>
+            <div className="flex items-center">
+              <div
+                role="status"
+                aria-live="polite"
+                aria-label={isOnline ? 'Online' : 'Offline'}
+                className="flex items-center"
+              >
+                <span className={`inline-block rounded-full w-3 h-3 ${isOnline ? 'bg-emerald-400' : 'bg-amber-400'} mr-2`} />
+                <span className="sr-only">{isOnline ? 'Online' : 'Offline'}</span>
+              </div>
+            </div>
           </div>
           <p className="text-gray-400 text-sm">Mantén presionado para cargar audio • Click para reproducir</p>
 
-          <div className="mt-2 flex items-center justify-center">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isOnline ? 'bg-emerald-500 text-black' : 'bg-amber-600 text-white'}`}>
-              {isOnline ? 'Conexión: Online' : 'Conexión: Offline'}
-            </span>
-          </div>
+          {/* moved status dot next to title */}
         </div>
 
         <div className="flex items-center justify-center gap-4 mb-8">
@@ -186,15 +258,28 @@ export default function App() {
           </button>
         </div>
 
-        {playingAudio && currentPad && (
-          <div className="mb-6">
-            <Player audio={playingAudio.audio} fileName={currentPad.fileName || ''} onClose={handleClosePlayer} />
-          </div>
-        )}
+        <div className="mb-6">
+          {currentPanel === 1 && playingAudio1 && currentPad1 && (
+            <Player audio={playingAudio1.audio} fileName={currentPad1.fileName || ''} onClose={() => handleClosePlayer(1)} />
+          )}
+          {currentPanel === 2 && playingAudio2 && currentPad2 && (
+            <Player audio={playingAudio2.audio} fileName={currentPad2.fileName || ''} onClose={() => handleClosePlayer(2)} />
+          )}
+        </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
           {pads.map((pad) => (
-            <AudioPad key={pad.id} pad={pad} isPlaying={playingAudio?.padId === pad.id && !playingAudio.audio.paused} onLoadAudio={handleLoadAudio} onPlayPause={handlePlayPause} />
+            <AudioPad
+              key={pad.id}
+              pad={pad}
+              isPlaying={
+                (playingAudio1?.padId === pad.id && !playingAudio1.audio.paused) ||
+                (playingAudio2?.padId === pad.id && !playingAudio2.audio.paused)
+              }
+              onLoadAudio={handleLoadAudio}
+              onPlayPause={handlePlayPause}
+              onDelete={handleDeletePad}
+            />
           ))}
         </div>
 
