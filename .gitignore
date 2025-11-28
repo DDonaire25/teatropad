@@ -1,0 +1,22 @@
+# Node / Vite
+node_modules/
+dist/
+.env
+.vite
+
+# macOS
+.DS_Store
+
+# Capacitor / Android local files
+android/local.properties
+android/keystore.jks
+android/keystore.properties
+android/app/build/
+
+# Keystore / signing files
+*.jks
+*.keystore
+
+# IDE / Editor
+.idea/
+.vscode/

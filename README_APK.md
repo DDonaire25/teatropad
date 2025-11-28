@@ -50,3 +50,57 @@ cd android
 Notas:
 - Si deseas que el APK use feature nativas o permisos (ej. acceso a micrófono), tendrás que añadir plugins de Capacitor y configurar permisos en `android/app/src/main/AndroidManifest.xml`.
 - Para distribuir en Google Play usa `assembleRelease` y firma tu APK / genera un AAB.
+
+## Integración Continua (GitHub Actions) ✅
+
+Puedes automatizar la compilación (AAB / APK) con GitHub Actions. He incluido un workflow de ejemplo en `.github/workflows/android-ci.yml` que hace lo siguiente:
+
+- Instala Node, JDK y dependencias.
+- Ejecuta `npm run build` y `npm run cap:copy`.
+- Llama a `./gradlew bundleRelease` para generar un AAB y `./gradlew assembleRelease` para APK.
+- Sube los artefactos (AAB/APK) como artefactos de la ejecución.
+
+Si quieres que el workflow también firme la AAB/APK automáticamente, crea estos secretos en tu repositorio:
+
+- `ANDROID_KEYSTORE` — contenido del keystore binario codificado en base64 (por ejemplo `base64 my-release-key.jks | pbcopy`).
+- `ANDROID_KEYSTORE_PASSWORD` — contraseña del keystore.
+- `ANDROID_KEY_ALIAS` — alias de la clave.
+- `ANDROID_KEY_PASSWORD` — contraseña de la clave.
+
+El workflow decodificará `ANDROID_KEYSTORE` en `android/keystore.jks` y creará `android/keystore.properties` con las demás variables. No subas keystores ni passwords al repo.
+
+## Firmado local / generación manual del keystore 🔐
+
+1. Generar un keystore (localmente):
+
+```bash
+keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key-alias
+```
+
+2. Para construir y firmar localmente con Android Studio: `Build -> Generate Signed Bundle / APK` y sigue el asistente.
+
+3. Para firmar desde CLI usando `keystore.properties`, guarda un archivo `android/keystore.properties` (NO lo subas al repo) con:
+
+```
+storeFile=keystore.jks
+storePassword=your-store-password
+keyAlias=your-key-alias
+keyPassword=your-key-password
+```
+
+4. Y ejecuta desde la carpeta android:
+
+```bash
+./gradlew bundleRelease  # genera AAB
+./gradlew assembleRelease  # genera APK
+```
+
+### Archivos importantes y dónde encontrarlos
+
+- Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+- Release APK: `android/app/build/outputs/apk/release/app-release.apk` (si no firmas, será sin firmar)
+- AAB: `android/app/build/outputs/bundle/release/app-release.aab`
+
+---
+
+He añadido también un archivo de ejemplo `android/keystore.properties.example` y un workflow en `.github/workflows/android-ci.yml`.
