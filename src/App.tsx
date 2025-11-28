@@ -415,7 +415,7 @@ export default function App() {
             playOnlyCurrentPanel={playOnlyCurrentPanel}
             onTogglePlayAll={() => togglePlayAll(playOnlyCurrentPanel)}
             onPlayAllNext={() => playAllNext()}
-            onTogglePlayAllScope={() => setPlayOnlyCurrentPanel((v) => !v)}
+            onTogglePlayAllScope={(val: boolean) => setPlayOnlyCurrentPanel(val)}
           />
         </div>
 

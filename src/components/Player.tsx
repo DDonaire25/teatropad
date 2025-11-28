@@ -11,7 +11,7 @@ interface PlayerProps {
   playOnlyCurrentPanel?: boolean;
   onTogglePlayAll?: () => void;
   onPlayAllNext?: () => void;
-  onTogglePlayAllScope?: () => void;
+  onTogglePlayAllScope?: (onlyCurrent: boolean) => void;
 }
 
 export default function Player({ audio, fileName, onClose }: PlayerProps) {
@@ -141,13 +141,13 @@ export default function Player({ audio, fileName, onClose }: PlayerProps) {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onTogglePlayAllScope && onTogglePlayAllScope()}
+              onClick={() => onTogglePlayAllScope && onTogglePlayAllScope(false)}
               className={`px-2 py-1 rounded-md text-xs transition ${!playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
             >
               Todos
             </button>
             <button
-              onClick={() => onTogglePlayAllScope && onTogglePlayAllScope()}
+              onClick={() => onTogglePlayAllScope && onTogglePlayAllScope(true)}
               className={`px-2 py-1 rounded-md text-xs transition ${playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
             >
               Solo panel
