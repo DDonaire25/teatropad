@@ -104,3 +104,14 @@ keyPassword=your-key-password
 ---
 
 He añadido también un archivo de ejemplo `android/keystore.properties.example` y un workflow en `.github/workflows/android-ci.yml`.
+
+## Guardar APK dentro del repositorio (opcional)
+
+Si prefieres que el CI deje el APK dentro del repositorio para descarga rápida, el workflow en este repo puede crear/actualizar una rama dedicada `apk-builds` y añadir los artefactos (AAB/APK/debug) allí con nombres que incluyan el tag/timestamp. Esto es útil para probar versiones sin firmar o para mantener un histórico de builds sin ensuciar la rama `main`.
+
+Ejemplo de archivos que se crearían en la rama `apk-builds`:
+
+- `apk/v1.0.0-20251128T010203-app-debug.apk`
+- `apk/v1.0.0-20251128T010203-app-release.aab`
+
+El flujo por defecto actual agrega los artefactos a `apk-builds` únicamente cuando la CI corre por un tag `v*` o cuando se publica una Release.

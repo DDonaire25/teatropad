@@ -1,5 +1,8 @@
 name: Android CI - build (AAB / APK)
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ main ]
@@ -19,6 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -121,3 +125,46 @@ jobs:
             android/app/build/outputs/apk/debug/*.apk
           draft: false
           prerelease: false
+
+      - name: Commit artifacts to `apk-builds` branch
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+          BRANCH: apk-builds
+          TIMESTAMP: ${{ github.run_attempt }}-$(date +%s)
+        run: |
+          echo "Prepare and commit built artifacts to branch: $BRANCH"
+          mkdir -p upload_tmp
+          cp android/app/build/outputs/bundle/release/*.aab upload_tmp/ 2>/dev/null || true
+          cp android/app/build/outputs/apk/release/*.apk upload_tmp/ 2>/dev/null || true
+          cp android/app/build/outputs/apk/debug/*.apk upload_tmp/ 2>/dev/null || true
+          if [ -z "$(ls -A upload_tmp 2>/dev/null)" ]; then
+            echo "No generated artifacts found to commit. Skipping branch update."
+            exit 0
+          fi
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          # Fetch branch if exists
+          git fetch origin $BRANCH || true
+          if git rev-parse --verify origin/$BRANCH >/dev/null 2>&1; then
+            git checkout $BRANCH
+            git reset --hard origin/$BRANCH
+          else
+            git checkout --orphan $BRANCH
+            git rm -rf . || true
+          fi
+
+          mkdir -p apk
+          for f in upload_tmp/*; do
+            base=$(basename "$f")
+            dst="apk/${TAG}-$(date +%Y%m%d%H%M%S)-${base}"
+            cp "$f" "$dst"
+            echo "Added $dst"
+          done
+
+          git add apk || true
+          # Use [ci skip] to avoid downstream triggers in case repo has broad CI
+          git commit -m "chore(apk): add artifacts for ${TAG} ($(date -u +%Y-%m-%dT%H:%M:%SZ)) [ci skip]" || echo "no changes to commit"
+          git push origin HEAD:$BRANCH
