@@ -58,6 +58,7 @@ export default function App() {
   const playAllIndex = useRef(0);
   const playAllQueue = useRef<AudioPadData[]>([]);
   const playAllAudio = useRef<HTMLAudioElement | null>(null);
+  const playNextRef = useRef<(index:number)=>void | null>(null);
 
   const pads = currentPanel === 1 ? pads1 : pads2;
 
@@ -272,6 +273,10 @@ export default function App() {
     setIsPlayingAll(true);
 
     const playNext = (index: number) => {
+      // update current index
+      playAllIndex.current = index;
+      // expose function for external controls (Next)
+      playNextRef.current = playNext;
       if (index >= playAllQueue.current.length) {
         // finished
         stopPlayAll();
@@ -331,6 +336,17 @@ export default function App() {
     playNext(0);
   };
 
+  const playAllNext = () => {
+    if (!isPlayingAll) return;
+    const nextIndex = playAllIndex.current + 1;
+    if (playNextRef.current) playNextRef.current(nextIndex);
+  };
+
+  const togglePlayAll = (onlyCurrentPanel = false) => {
+    if (isPlayingAll) stopPlayAll();
+    else playAll(onlyCurrentPanel);
+  };
+
   const handleClosePlayer = (panel: number) => {
     if (panel === 1) {
       if (!playingAudio1) return;
@@ -384,12 +400,23 @@ export default function App() {
         </div>
 
         <div className="mb-6">
-          {currentPanel === 1 && playingAudio1 && currentPad1 && (
-            <Player audio={playingAudio1.audio} fileName={currentPad1.fileName || ''} onClose={() => handleClosePlayer(1)} />
-          )}
-          {currentPanel === 2 && playingAudio2 && currentPad2 && (
-            <Player audio={playingAudio2.audio} fileName={currentPad2.fileName || ''} onClose={() => handleClosePlayer(2)} />
-          )}
+          {/* Unified player — shows single-audio controls if a pad is playing on the current panel,
+              and also exposes Play All controls (merged) */}
+          <Player
+            audio={currentPanel === 1 ? (playingAudio1?.audio ?? null) : (playingAudio2?.audio ?? null)}
+            fileName={
+              (currentPanel === 1 && currentPad1?.fileName) || (currentPanel === 2 && currentPad2?.fileName)
+                ? ((currentPanel === 1 ? currentPad1?.fileName : currentPad2?.fileName) as string)
+                : 'Reproducir todo'
+            }
+            onClose={() => handleClosePlayer(currentPanel)}
+            isPlayingAll={isPlayingAll}
+            playAllCount={(playOnlyCurrentPanel ? pads.filter(p => p.audioUrl).length : pads1.concat(pads2).filter(p => p.audioUrl).length)}
+            playOnlyCurrentPanel={playOnlyCurrentPanel}
+            onTogglePlayAll={() => togglePlayAll(playOnlyCurrentPanel)}
+            onPlayAllNext={() => playAllNext()}
+            onTogglePlayAllScope={() => setPlayOnlyCurrentPanel((v) => !v)}
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
@@ -412,37 +439,7 @@ export default function App() {
           <p>Mantén presionado cualquier pad para cargar audio</p>
         </div>
 
-        {/* Play all / bottom control */}
-        <div className="mt-8 fixed bottom-4 left-0 right-0 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-gradient-to-r from-slate-900/80 via-slate-800/80 to-slate-900/80 px-4 py-3 rounded-full shadow-lg border border-gray-700 flex items-center gap-3">
-            <button
-              onClick={() => { if (isPlayingAll) stopPlayAll(); else playAll(playOnlyCurrentPanel); }}
-              aria-label="Reproducir todo"
-              className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-3 transition-colors"
-            >
-              {isPlayingAll ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
-            </button>
-
-            <div className="text-left">
-              <div className="text-sm font-semibold">Reproducir todo</div>
-              <div className="text-xs text-gray-400">{(playOnlyCurrentPanel ? pads.filter(p => p.audioUrl).length : pads1.concat(pads2).filter(p => p.audioUrl).length)} audios disponibles</div>
-            </div>
-            <div className="flex items-center gap-2 ml-4">
-              <button
-                onClick={() => setPlayOnlyCurrentPanel(false)}
-                className={`px-2 py-1 rounded-md text-xs transition ${!playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => setPlayOnlyCurrentPanel(true)}
-                className={`px-2 py-1 rounded-md text-xs transition ${playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
-              >
-                Solo panel
-              </button>
-            </div>
-          </div>
-        </div>
+          {/* Play All controls moved into the unified Player component above */}
       </div>
     </div>
   );

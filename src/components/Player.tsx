@@ -1,10 +1,17 @@
-import { Play, Pause, Square, X } from 'lucide-react';
+import { Play, Pause, Square, X, SkipForward } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface PlayerProps {
   audio: HTMLAudioElement | null;
   fileName: string;
   onClose: () => void;
+  // Play-all controls
+  isPlayingAll?: boolean;
+  playAllCount?: number;
+  playOnlyCurrentPanel?: boolean;
+  onTogglePlayAll?: () => void;
+  onPlayAllNext?: () => void;
+  onTogglePlayAllScope?: () => void;
 }
 
 export default function Player({ audio, fileName, onClose }: PlayerProps) {
@@ -108,6 +115,44 @@ export default function Player({ audio, fileName, onClose }: PlayerProps) {
           >
             <Square size={20} fill="white" />
           </button>
+        </div>
+
+        {/* Play All controls merged into the player */}
+        <div className="border-t border-gray-700 pt-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onTogglePlayAll && onTogglePlayAll()}
+              aria-label="Play All"
+              className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-2 transition-colors"
+            >
+              {isPlayingAll ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+
+            <button
+              onClick={() => onPlayAllNext && onPlayAllNext()}
+              aria-label="Siguiente"
+              className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 transition-colors"
+            >
+              <SkipForward size={16} />
+            </button>
+
+            <div className="text-xs text-gray-400 ml-2">{playAllCount ?? 0} audios</div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onTogglePlayAllScope && onTogglePlayAllScope()}
+              className={`px-2 py-1 rounded-md text-xs transition ${!playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => onTogglePlayAllScope && onTogglePlayAllScope()}
+              className={`px-2 py-1 rounded-md text-xs transition ${playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
+            >
+              Solo panel
+            </button>
+          </div>
         </div>
       </div>
     </div>
