@@ -230,7 +230,7 @@ export default function App() {
           <div className="flex items-center justify-center gap-3 mb-2">
             <div className="flex items-center gap-3">
               <MusicIcon size={40} className="text-cyan-400" />
-              <h1 className="text-4xl font-bold">Donaire Play</h1>
+              <h1 className="text-4xl font-bold">TeatroPad</h1>
             </div>
             <div className="flex items-center">
               <div
