@@ -54,6 +54,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const audioRefs = useRef<Map<number, HTMLAudioElement>>(new Map());
   const [isPlayingAll, setIsPlayingAll] = useState(false);
+  const [playOnlyCurrentPanel, setPlayOnlyCurrentPanel] = useState(false);
   const playAllIndex = useRef(0);
   const playAllQueue = useRef<AudioPadData[]>([]);
   const playAllAudio = useRef<HTMLAudioElement | null>(null);
@@ -240,6 +241,11 @@ export default function App() {
       try { playAllAudio.current.pause(); playAllAudio.current.currentTime = 0; } catch {}
       playAllAudio.current = null;
     }
+    // clear playingAudio UI state
+    if (playingAudio1) { try { playingAudio1.audio.pause(); } catch {} }
+    if (playingAudio2) { try { playingAudio2.audio.pause(); } catch {} }
+    setPlayingAudio1(null);
+    setPlayingAudio2(null);
   };
 
   const playAll = (onlyCurrentPanel = false) => {
@@ -250,6 +256,16 @@ export default function App() {
 
     // stop any existing play all
     stopPlayAll();
+
+    // stop any individually playing audio so Play All can take over the UI
+    if (playingAudio1) {
+      try { playingAudio1.audio.pause(); playingAudio1.audio.currentTime = 0; } catch {}
+      setPlayingAudio1(null);
+    }
+    if (playingAudio2) {
+      try { playingAudio2.audio.pause(); playingAudio2.audio.currentTime = 0; } catch {}
+      setPlayingAudio2(null);
+    }
 
     playAllQueue.current = queue;
     playAllIndex.current = 0;
@@ -263,6 +279,30 @@ export default function App() {
       }
 
       const pad = playAllQueue.current[index];
+      // update UI playing state for the pad being played
+      if (pad.id < 12) {
+        // panel 1
+        if (playingAudio1 && playingAudio1.padId !== pad.id) {
+          try { playingAudio1.audio.pause(); playingAudio1.audio.currentTime = 0; } catch {}
+        }
+        const a = audioRefs.current.get(pad.id);
+        if (a) setPlayingAudio1({ padId: pad.id, audio: a });
+        setPlayingAudio2((prev) => {
+          if (prev) { try { prev.audio.pause(); prev.audio.currentTime = 0; } catch {} }
+          return null;
+        });
+      } else {
+        // panel 2
+        if (playingAudio2 && playingAudio2.padId !== pad.id) {
+          try { playingAudio2.audio.pause(); playingAudio2.audio.currentTime = 0; } catch {}
+        }
+        const a2 = audioRefs.current.get(pad.id);
+        if (a2) setPlayingAudio2({ padId: pad.id, audio: a2 });
+        setPlayingAudio1((prev) => {
+          if (prev) { try { prev.audio.pause(); prev.audio.currentTime = 0; } catch {} }
+          return null;
+        });
+      }
       let audio = audioRefs.current.get(pad.id);
       if (!audio) {
         audio = new Audio(pad.audioUrl!);
@@ -376,7 +416,7 @@ export default function App() {
         <div className="mt-8 fixed bottom-4 left-0 right-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto bg-gradient-to-r from-slate-900/80 via-slate-800/80 to-slate-900/80 px-4 py-3 rounded-full shadow-lg border border-gray-700 flex items-center gap-3">
             <button
-              onClick={() => { if (isPlayingAll) stopPlayAll(); else playAll(false); }}
+              onClick={() => { if (isPlayingAll) stopPlayAll(); else playAll(playOnlyCurrentPanel); }}
               aria-label="Reproducir todo"
               className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-3 transition-colors"
             >
@@ -385,7 +425,21 @@ export default function App() {
 
             <div className="text-left">
               <div className="text-sm font-semibold">Reproducir todo</div>
-              <div className="text-xs text-gray-400">{pads1.concat(pads2).filter(p => p.audioUrl).length} audios disponibles</div>
+              <div className="text-xs text-gray-400">{(playOnlyCurrentPanel ? pads.filter(p => p.audioUrl).length : pads1.concat(pads2).filter(p => p.audioUrl).length)} audios disponibles</div>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <button
+                onClick={() => setPlayOnlyCurrentPanel(false)}
+                className={`px-2 py-1 rounded-md text-xs transition ${!playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setPlayOnlyCurrentPanel(true)}
+                className={`px-2 py-1 rounded-md text-xs transition ${playOnlyCurrentPanel ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
+              >
+                Solo panel
+              </button>
             </div>
           </div>
         </div>
