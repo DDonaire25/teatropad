@@ -58,7 +58,7 @@ export default function App() {
   const playAllIndex = useRef(0);
   const playAllQueue = useRef<AudioPadData[]>([]);
   const playAllAudio = useRef<HTMLAudioElement | null>(null);
-  const playNextRef = useRef<(index:number)=>void | null>(null);
+  const [currentPlayAllIndex, setCurrentPlayAllIndex] = useState<number | null>(null);
 
   const pads = currentPanel === 1 ? pads1 : pads2;
 
@@ -247,6 +247,7 @@ export default function App() {
     if (playingAudio2) { try { playingAudio2.audio.pause(); } catch {} }
     setPlayingAudio1(null);
     setPlayingAudio2(null);
+    setCurrentPlayAllIndex(null);
   };
 
   const playAll = (onlyCurrentPanel = false) => {
@@ -271,12 +272,9 @@ export default function App() {
     playAllQueue.current = queue;
     playAllIndex.current = 0;
     setIsPlayingAll(true);
+    setCurrentPlayAllIndex(0);
 
     const playNext = (index: number) => {
-      // update current index
-      playAllIndex.current = index;
-      // expose function for external controls (Next)
-      playNextRef.current = playNext;
       if (index >= playAllQueue.current.length) {
         // finished
         stopPlayAll();
@@ -285,6 +283,8 @@ export default function App() {
 
       const pad = playAllQueue.current[index];
       // update UI playing state for the pad being played
+      playAllIndex.current = index;
+      setCurrentPlayAllIndex(index);
       if (pad.id < 12) {
         // panel 1
         if (playingAudio1 && playingAudio1.padId !== pad.id) {
@@ -337,14 +337,87 @@ export default function App() {
   };
 
   const playAllNext = () => {
-    if (!isPlayingAll) return;
     const nextIndex = playAllIndex.current + 1;
-    if (playNextRef.current) playNextRef.current(nextIndex);
+    if (nextIndex >= playAllQueue.current.length) {
+      stopPlayAll();
+      return;
+    }
+    // stop current audio
+    if (playAllAudio.current) {
+      try { playAllAudio.current.pause(); playAllAudio.current.currentTime = 0; } catch {}
+    }
+    // play the next pad
+    const pad = playAllQueue.current[nextIndex];
+    if (!pad) { stopPlayAll(); return; }
+    playAllIndex.current = nextIndex;
+    setCurrentPlayAllIndex(nextIndex);
+
+    let audio = audioRefs.current.get(pad.id);
+    if (!audio) {
+      audio = new Audio(pad.audioUrl!);
+      audio.loop = false;
+      audioRefs.current.set(pad.id, audio);
+    } else {
+      audio.loop = false;
+      audio.currentTime = 0;
+    }
+
+    // update UI playing state
+    if (pad.id < 12) {
+      setPlayingAudio1({ padId: pad.id, audio });
+      setPlayingAudio2(null);
+    } else {
+      setPlayingAudio2({ padId: pad.id, audio });
+      setPlayingAudio1(null);
+    }
+
+    playAllAudio.current = audio;
+
+    const onEnded = () => {
+      audio?.removeEventListener('ended', onEnded);
+      playAllNext();
+    };
+    audio.addEventListener('ended', onEnded, { once: true });
+    audio.play().catch((e) => { console.warn('playAllNext failed', e); playAllNext(); });
   };
 
-  const togglePlayAll = (onlyCurrentPanel = false) => {
-    if (isPlayingAll) stopPlayAll();
-    else playAll(onlyCurrentPanel);
+  const playAllPrev = () => {
+    const prevIndex = playAllIndex.current - 1;
+    if (prevIndex < 0) return;
+    if (playAllAudio.current) {
+      try { playAllAudio.current.pause(); playAllAudio.current.currentTime = 0; } catch {}
+    }
+    const pad = playAllQueue.current[prevIndex];
+    if (!pad) return;
+    playAllIndex.current = prevIndex;
+    setCurrentPlayAllIndex(prevIndex);
+
+    let audio = audioRefs.current.get(pad.id);
+    if (!audio) {
+      audio = new Audio(pad.audioUrl!);
+      audio.loop = false;
+      audioRefs.current.set(pad.id, audio);
+    } else {
+      audio.loop = false;
+      audio.currentTime = 0;
+    }
+
+    if (pad.id < 12) {
+      setPlayingAudio1({ padId: pad.id, audio });
+      setPlayingAudio2(null);
+    } else {
+      setPlayingAudio2({ padId: pad.id, audio });
+      setPlayingAudio1(null);
+    }
+
+    playAllAudio.current = audio;
+
+    const onEnded = () => {
+      audio?.removeEventListener('ended', onEnded);
+      playAllNext();
+    };
+    audio.addEventListener('ended', onEnded, { once: true });
+    audio.play().catch((e) => { console.warn('playAllPrev failed', e); playAllNext(); });
   };
 
   const handleClosePlayer = (panel: number) => {
@@ -400,23 +473,36 @@ export default function App() {
         </div>
 
         <div className="mb-6">
-          {/* Unified player — shows single-audio controls if a pad is playing on the current panel,
-              and also exposes Play All controls (merged) */}
-          <Player
-            audio={currentPanel === 1 ? (playingAudio1?.audio ?? null) : (playingAudio2?.audio ?? null)}
-            fileName={
-              (currentPanel === 1 && currentPad1?.fileName) || (currentPanel === 2 && currentPad2?.fileName)
-                ? ((currentPanel === 1 ? currentPad1?.fileName : currentPad2?.fileName) as string)
-                : 'Reproducir todo'
-            }
-            onClose={() => handleClosePlayer(currentPanel)}
-            isPlayingAll={isPlayingAll}
-            playAllCount={(playOnlyCurrentPanel ? pads.filter(p => p.audioUrl).length : pads1.concat(pads2).filter(p => p.audioUrl).length)}
-            playOnlyCurrentPanel={playOnlyCurrentPanel}
-            onTogglePlayAll={() => togglePlayAll(playOnlyCurrentPanel)}
-            onPlayAllNext={() => playAllNext()}
-            onTogglePlayAllScope={(val: boolean) => setPlayOnlyCurrentPanel(val)}
-          />
+          {currentPanel === 1 && playingAudio1 && currentPad1 && (
+            <Player
+              audio={playingAudio1.audio}
+              fileName={currentPad1.fileName || ''}
+              onClose={() => handleClosePlayer(1)}
+              isPlayingAll={isPlayingAll}
+              onTogglePlayAll={() => { if (isPlayingAll) stopPlayAll(); else playAll(playOnlyCurrentPanel); }}
+              onPlayAllNext={playAllNext}
+              onPlayAllPrev={playAllPrev}
+              playOnlyCurrentPanel={playOnlyCurrentPanel}
+              setPlayOnlyCurrentPanel={setPlayOnlyCurrentPanel}
+              playAllQueueCount={(playOnlyCurrentPanel ? pads.filter(p => p.audioUrl).length : pads1.concat(pads2).filter(p => p.audioUrl).length)}
+              currentPlayAllIndex={currentPlayAllIndex}
+            />
+          )}
+          {currentPanel === 2 && playingAudio2 && currentPad2 && (
+            <Player
+              audio={playingAudio2.audio}
+              fileName={currentPad2.fileName || ''}
+              onClose={() => handleClosePlayer(2)}
+              isPlayingAll={isPlayingAll}
+              onTogglePlayAll={() => { if (isPlayingAll) stopPlayAll(); else playAll(playOnlyCurrentPanel); }}
+              onPlayAllNext={playAllNext}
+              onPlayAllPrev={playAllPrev}
+              playOnlyCurrentPanel={playOnlyCurrentPanel}
+              setPlayOnlyCurrentPanel={setPlayOnlyCurrentPanel}
+              playAllQueueCount={(playOnlyCurrentPanel ? pads.filter(p => p.audioUrl).length : pads1.concat(pads2).filter(p => p.audioUrl).length)}
+              currentPlayAllIndex={currentPlayAllIndex}
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
@@ -439,7 +525,7 @@ export default function App() {
           <p>Mantén presionado cualquier pad para cargar audio</p>
         </div>
 
-          {/* Play All controls moved into the unified Player component above */}
+        {/* Play all controls moved into Player component */}
       </div>
     </div>
   );
