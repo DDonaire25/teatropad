@@ -6,12 +6,13 @@ import { AudioPadData } from '../types/audio';
 interface AudioPadProps {
   pad: AudioPadData;
   isPlaying: boolean;
+  progress?: { current: number; duration: number } | null;
   onLoadAudio: (padId: number, file: File) => void;
   onPlayPause: (padId: number) => void;
   onDelete: (padId: number) => void;
 }
 
-export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onDelete }: AudioPadProps) {
+export default function AudioPad({ pad, isPlaying, progress, onLoadAudio, onPlayPause, onDelete }: AudioPadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef<boolean>(false);
@@ -147,7 +148,7 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onD
     <>
       <button
         className={`relative aspect-square rounded-2xl shadow-lg transition-all duration-200 active:scale-95 overflow-hidden ${pad.color} ${
-          isPlaying ? 'ring-4 ring-white animate-pulse' : ''
+          isPlaying ? 'ring-6 ring-white animate-pulse' : ''
         }`}
         ref={buttonRef}
         onMouseDown={handleMouseDown}
@@ -180,6 +181,15 @@ export default function AudioPad({ pad, isPlaying, onLoadAudio, onPlayPause, onD
                 <button onClick={handleDelete} className="w-full text-left px-3 py-2 hover:bg-slate-700">Borrar</button>
               </div>
             </div>, document.body
+          )}
+          {/* progress bar */}
+          {isPlaying && pad && (pad.fileName || pad.audioUrl) && (
+            <div className="absolute left-0 right-0 bottom-0 h-1 bg-white/20">
+              <div
+                className="h-1 bg-cyan-400 transition-all"
+                style={{ width: `${Math.min(100, Math.max(0, (progress?.current || 0) / ((progress?.duration || 1) || 1) * 100))}%` }}
+              />
+            </div>
           )}
       </button>
       <input
