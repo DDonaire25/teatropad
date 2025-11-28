@@ -17,6 +17,9 @@ android/app/build/
 *.jks
 *.keystore
 
+# Local Android SDK installed for CI / local builds — do not commit
+android-sdk/
+
 # IDE / Editor
 .idea/
 .vscode/
