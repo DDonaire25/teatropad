@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Music as MusicIcon } from 'lucide-react';
+import { Music as MusicIcon, Play as PlayIcon, Pause as PauseIcon } from 'lucide-react';
 import AudioPad from './components/AudioPad';
 import Player from './components/Player';
 import { AudioPadData, PlayingAudio } from './types/audio';
@@ -53,6 +53,10 @@ export default function App() {
   const [playingAudio2, setPlayingAudio2] = useState<PlayingAudio | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const audioRefs = useRef<Map<number, HTMLAudioElement>>(new Map());
+  const [isPlayingAll, setIsPlayingAll] = useState(false);
+  const playAllIndex = useRef(0);
+  const playAllQueue = useRef<AudioPadData[]>([]);
+  const playAllAudio = useRef<HTMLAudioElement | null>(null);
 
   const pads = currentPanel === 1 ? pads1 : pads2;
 
@@ -193,17 +197,98 @@ export default function App() {
     let audio = audioRefs.current.get(padId);
     if (!audio) {
       audio = new Audio(pad.audioUrl);
-      audio.loop = true;
+      // Play each pad only once (no looping)
+      audio.loop = false;
       audioRefs.current.set(padId, audio);
+    } else {
+      // ensure no loop in case a previous run set it
+      audio.loop = false;
     }
 
     if (playingAudio?.padId === padId) {
       if (audio.paused) audio.play();
       else audio.pause();
     } else {
+      // if Play All is running, stop it when user starts a single pad
+      if (isPlayingAll) stopPlayAll();
+
+      // attach ended handler to clear playing state when done
+      const clearOnEnd = () => {
+        // ensure we only clear if the same pad is the tracked playing audio
+        setTimeout(() => {
+          const currentPlaying = isPanel1 ? playingAudio1 : playingAudio2;
+          if (currentPlaying?.padId === padId) {
+            // stop and clear
+            if (isPanel1) setPlayingAudio1(null);
+            else setPlayingAudio2(null);
+          }
+        }, 0);
+      };
+
+      audio.addEventListener('ended', clearOnEnd, { once: true });
+
       audio.play();
       setPlaying({ padId, audio });
     }
+  };
+
+  const stopPlayAll = () => {
+    setIsPlayingAll(false);
+    playAllQueue.current = [];
+    playAllIndex.current = 0;
+    if (playAllAudio.current) {
+      try { playAllAudio.current.pause(); playAllAudio.current.currentTime = 0; } catch {}
+      playAllAudio.current = null;
+    }
+  };
+
+  const playAll = (onlyCurrentPanel = false) => {
+    // build queue from pads with audioUrl
+    const allPads = onlyCurrentPanel ? pads : pads1.concat(pads2);
+    const queue = allPads.filter(p => p.audioUrl);
+    if (!queue.length) return;
+
+    // stop any existing play all
+    stopPlayAll();
+
+    playAllQueue.current = queue;
+    playAllIndex.current = 0;
+    setIsPlayingAll(true);
+
+    const playNext = (index: number) => {
+      if (index >= playAllQueue.current.length) {
+        // finished
+        stopPlayAll();
+        return;
+      }
+
+      const pad = playAllQueue.current[index];
+      let audio = audioRefs.current.get(pad.id);
+      if (!audio) {
+        audio = new Audio(pad.audioUrl!);
+        audio.loop = false;
+        audioRefs.current.set(pad.id, audio);
+      } else {
+        audio.loop = false;
+        audio.currentTime = 0;
+      }
+
+      playAllAudio.current = audio;
+      // ensure previous ended handlers don't pile up
+      const onEnded = () => {
+        audio?.removeEventListener('ended', onEnded);
+        playNext(index + 1);
+      };
+
+      audio.addEventListener('ended', onEnded, { once: true });
+      audio.play().catch((err) => {
+        console.warn('playAll: failed to play', err);
+        // try next file
+        playNext(index + 1);
+      });
+    };
+
+    playNext(0);
   };
 
   const handleClosePlayer = (panel: number) => {
@@ -285,6 +370,24 @@ export default function App() {
 
         <div className="text-center text-gray-500 text-xs">
           <p>Mantén presionado cualquier pad para cargar audio</p>
+        </div>
+
+        {/* Play all / bottom control */}
+        <div className="mt-8 fixed bottom-4 left-0 right-0 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto bg-gradient-to-r from-slate-900/80 via-slate-800/80 to-slate-900/80 px-4 py-3 rounded-full shadow-lg border border-gray-700 flex items-center gap-3">
+            <button
+              onClick={() => { if (isPlayingAll) stopPlayAll(); else playAll(false); }}
+              aria-label="Reproducir todo"
+              className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-3 transition-colors"
+            >
+              {isPlayingAll ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
+            </button>
+
+            <div className="text-left">
+              <div className="text-sm font-semibold">Reproducir todo</div>
+              <div className="text-xs text-gray-400">{pads1.concat(pads2).filter(p => p.audioUrl).length} audios disponibles</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
