@@ -69,6 +69,8 @@ Si quieres que el workflow también firme la AAB/APK automáticamente, crea esto
 
 El workflow decodificará `ANDROID_KEYSTORE` en `android/keystore.jks` y creará `android/keystore.properties` con las demás variables. No subas keystores ni passwords al repo.
 
+Nota: el archivo `android/app/build.gradle` en este proyecto está preparado para leer `android/keystore.properties` si existe y aplicar la configuración de firmado (signingConfig) en la variante `release`. Con esto, cuando la CI escriba la `keystore.properties`, las tareas `bundleRelease` / `assembleRelease` generarán artefactos firmados.
+
 ## Firmado local / generación manual del keystore 🔐
 
 1. Generar un keystore (localmente):

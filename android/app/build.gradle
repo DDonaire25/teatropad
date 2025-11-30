@@ -1,6 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
+    // Load optional keystore properties so release builds can be signed automatically
+    // by CI when android/keystore.properties is present (workflow writes it).
+    def keystorePropertiesFile = rootProject.file("keystore.properties")
+    def keystoreProperties = new Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
     namespace "com.radiolibrevientosur.donairepad"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
@@ -20,6 +27,22 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Use signing configuration when keystore properties were supplied
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    // Configure signingConfigs using android/keystore.properties when present.
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = rootProject.file(keystoreProperties['storeFile'])
+                storePassword = keystoreProperties['storePassword']
+                keyAlias = keystoreProperties['keyAlias']
+                keyPassword = keystoreProperties['keyPassword']
+            }
         }
     }
 }
