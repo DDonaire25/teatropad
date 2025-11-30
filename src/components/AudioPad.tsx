@@ -110,9 +110,10 @@ export default function AudioPad({ pad, isPlaying, progress, onLoadAudio, onPlay
     fileInputRef.current?.click();
   };
 
+  // Truncate long file names to a maximum of 20 characters for better fit on phones
   const truncateFileName = (name: string) => {
-    if (name.length <= 15) return name;
-    return name.substring(0, 12) + '...';
+    if (name.length <= 20) return name;
+    return name.substring(0, 17) + '...';
   };
 
   useEffect(() => {

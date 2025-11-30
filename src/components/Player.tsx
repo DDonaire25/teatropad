@@ -64,6 +64,12 @@ export default function Player({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const truncateFileName = (name: string) => {
+    if (!name) return '';
+    if (name.length <= 20) return name;
+    return name.substring(0, 17) + '...';
+  };
+
   const handlePlayPause = () => {
     if (!audio) return;
     if (isPlaying) {
@@ -88,10 +94,10 @@ export default function Player({
   };
 
   return (
-    <div className="w-full bg-gradient-to-r from-gray-900 to-slate-800 rounded-xl p-4 shadow-xl border border-gray-700">
+    <div className="w-full bg-gradient-to-r from-gray-900 to-slate-800 rounded-xl p-3 sm:p-4 shadow-xl border border-gray-700">
       <div className="flex items-center justify-between mb-3">
         <div className="flex-1">
-          <p className="text-white font-semibold text-sm truncate">{fileName}</p>
+          <p className="text-white font-semibold text-sm truncate">{truncateFileName(fileName)}</p>
           <p className="text-cyan-400 text-xs">En reproducción</p>
         </div>
         <button
@@ -116,12 +122,12 @@ export default function Player({
           <span className="text-xs text-gray-400 w-10">{formatTime(duration)}</span>
         </div>
 
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={handlePlayPause}
-            className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-3 transition-colors"
+            className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-2 sm:p-3 transition-colors"
           >
-            {isPlaying ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" />}
+            {isPlaying ? <Pause size={18} fill="white" /> : <Play size={18} fill="white" />}
           </button>
           <button
             onClick={handleStop}
@@ -157,7 +163,7 @@ export default function Player({
                 <SkipForward size={16} />
               </button>
 
-              <div className="text-xs text-gray-400 ml-2">
+              <div className="text-xs text-gray-400 ml-2 text-center sm:text-left">
                 {typeof currentPlayAllIndex === 'number' && typeof playAllQueueCount === 'number'
                   ? `${currentPlayAllIndex + 1}/${playAllQueueCount}`
                   : `${playAllQueueCount || 0} items`}
@@ -168,13 +174,13 @@ export default function Player({
                   onClick={() => setPlayOnlyCurrentPanel && setPlayOnlyCurrentPanel(false)}
                   className={`px-2 py-0.5 rounded-md text-xs transition ${!Boolean(playOnlyCurrentPanel) ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
                 >
-                  Todos
+                  <span className="whitespace-nowrap">Todos</span>
                 </button>
                 <button
                   onClick={() => setPlayOnlyCurrentPanel && setPlayOnlyCurrentPanel(true)}
                   className={`px-2 py-0.5 rounded-md text-xs transition ${Boolean(playOnlyCurrentPanel) ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
                 >
-                  Solo panel
+                  <span className="whitespace-nowrap">Solo panel</span>
                 </button>
               </div>
             </div>
