@@ -7,7 +7,12 @@ android {
   }
 }
 
-apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+def cordovaVars = file("../capacitor-cordova-android-plugins/cordova.variables.gradle")
+if (cordovaVars.exists()) {
+  apply from: cordovaVars
+} else {
+  logger.info("cordova.variables.gradle not found - skipping apply (no extra plugin variables)")
+}
 dependencies {
 
 
