@@ -16,7 +16,19 @@ interface PlayerProps {
   currentPlayAllIndex?: number | null;
 }
 
-export default function Player({ audio, fileName, onClose }: PlayerProps) {
+export default function Player({
+  audio,
+  fileName,
+  onClose,
+  isPlayingAll,
+  onTogglePlayAll,
+  onPlayAllNext,
+  onPlayAllPrev,
+  playOnlyCurrentPanel,
+  setPlayOnlyCurrentPanel,
+  playAllQueueCount,
+  currentPlayAllIndex,
+}: PlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);

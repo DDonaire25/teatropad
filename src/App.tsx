@@ -53,6 +53,13 @@ export default function App() {
   const [playingAudio2, setPlayingAudio2] = useState<PlayingAudio | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const audioRefs = useRef<Map<number, HTMLAudioElement>>(new Map());
+  // Play-all state per panel
+  const [isPlayingAll1, setIsPlayingAll1] = useState(false);
+  const [isPlayingAll2, setIsPlayingAll2] = useState(false);
+  const isPlayingAllRef1 = useRef(false);
+  const isPlayingAllRef2 = useRef(false);
+  const [playAllIndex1, setPlayAllIndex1] = useState<number | null>(null);
+  const [playAllIndex2, setPlayAllIndex2] = useState<number | null>(null);
 
   const pads = currentPanel === 1 ? pads1 : pads2;
 
@@ -127,6 +134,133 @@ export default function App() {
     savePad(padId, file, file.name).catch((e) => console.error('persist error', e));
   };
 
+  // Helpers for Play All feature
+  const getQueueForPanel = (panel: number) => {
+    const list = panel === 1 ? pads1 : pads2;
+    return list.filter((p) => p.audioUrl).map((p) => p.id);
+  };
+
+  const stopPlayAll = (panel: number) => {
+    if (panel === 1) {
+      setIsPlayingAll1(false);
+      isPlayingAllRef1.current = false;
+      setPlayAllIndex1(null);
+    } else {
+      setIsPlayingAll2(false);
+      isPlayingAllRef2.current = false;
+      setPlayAllIndex2(null);
+    }
+  };
+
+  const playQueueAt = (panel: number, index: number) => {
+    const queue = getQueueForPanel(panel);
+    if (!queue || queue.length === 0) return stopPlayAll(panel);
+    if (index < 0 || index >= queue.length) return stopPlayAll(panel);
+
+    const padId = queue[index];
+    const isPanel1 = panel === 1;
+    const setPlaying = isPanel1 ? setPlayingAudio1 : setPlayingAudio2;
+
+    // create/play the audio for padId
+    let audio = audioRefs.current.get(padId);
+    const pad = (isPanel1 ? pads1 : pads2).find((p) => p.id === padId)!;
+    if (!audio) {
+      audio = new Audio(pad.audioUrl!);
+      audio.loop = false;
+      audioRefs.current.set(padId, audio);
+    }
+
+    // Attach a one-shot ended handler to move to next item if play-all is still active
+    audio.addEventListener('ended', () => {
+      const active = isPanel1 ? isPlayingAllRef1.current : isPlayingAllRef2.current;
+      if (!active) {
+        setPlaying(null);
+        return;
+      }
+      const nextIndex = index + 1;
+      if (nextIndex >= queue.length) {
+        // finished queue
+        stopPlayAll(panel);
+        setPlaying(null);
+      } else {
+        // play next
+        playQueueAt(panel, nextIndex);
+      }
+    }, { once: true });
+
+    // Stop other playing audio in the other panel
+    if (isPanel1 && playingAudio2) {
+      playingAudio2.audio.pause();
+      setPlayingAudio2(null);
+    }
+    if (!isPanel1 && playingAudio1) {
+      playingAudio1.audio.pause();
+      setPlayingAudio1(null);
+    }
+
+    // Start playback and set state
+    setPlaying({ padId, audio });
+    audio.currentTime = 0;
+    audio.play();
+
+    if (isPanel1) setPlayAllIndex1(index);
+    else setPlayAllIndex2(index);
+  };
+
+  const handleTogglePlayAll = (panel: number) => {
+    const isPanel1 = panel === 1;
+    const active = isPanel1 ? isPlayingAll1 : isPlayingAll2;
+    if (active) {
+      stopPlayAll(panel);
+      // pause current audio
+      const playing = isPanel1 ? playingAudio1 : playingAudio2;
+      if (playing) {
+        playing.audio.pause();
+      }
+      return;
+    }
+
+    const queue = getQueueForPanel(panel);
+    if (!queue || queue.length === 0) return; // nothing to play
+
+    // determine start index: prefer currently playing pad if exists in queue, else 0
+    const currentlyPlaying = panel === 1 ? playingAudio1?.padId : playingAudio2?.padId;
+    let startIndex = 0;
+    if (typeof currentlyPlaying === 'number') {
+      const idx = queue.indexOf(currentlyPlaying);
+      if (idx >= 0) startIndex = idx;
+    }
+
+    if (isPanel1) {
+      setIsPlayingAll1(true);
+      isPlayingAllRef1.current = true;
+    } else {
+      setIsPlayingAll2(true);
+      isPlayingAllRef2.current = true;
+    }
+
+    playQueueAt(panel, startIndex);
+  };
+
+  const handlePlayAllNext = (panel: number) => {
+    const isPanel1 = panel === 1;
+    const queue = getQueueForPanel(panel);
+    const curIndex = isPanel1 ? playAllIndex1 : playAllIndex2;
+    if (curIndex === null || curIndex === undefined) return;
+    const next = curIndex + 1;
+    if (next >= queue.length) return stopPlayAll(panel);
+    playQueueAt(panel, next);
+  };
+
+  const handlePlayAllPrev = (panel: number) => {
+    const isPanel1 = panel === 1;
+    const curIndex = isPanel1 ? playAllIndex1 : playAllIndex2;
+    if (curIndex === null || curIndex === undefined) return;
+    const prev = curIndex - 1;
+    if (prev < 0) return; // already at first
+    playQueueAt(panel, prev);
+  };
+
   const handleDeletePad = async (padId: number) => {
     // stop audio if playing or referenced
     const existingAudio = audioRefs.current.get(padId);
@@ -195,8 +329,12 @@ export default function App() {
       audio = new Audio(pad.audioUrl);
       // Ensure audio does NOT repeat automatically — play once and stop at end
       audio.loop = false;
-      // When audio ends, clear the playing state for the current panel
-      audio.addEventListener('ended', () => setPlaying(null));
+      // When audio ends, clear the playing state for the current panel unless Play-All is active
+      const isPanel1 = padId < 12;
+      audio.addEventListener('ended', () => {
+        const active = isPanel1 ? isPlayingAllRef1.current : isPlayingAllRef2.current;
+        if (!active) setPlaying(null);
+      });
       audioRefs.current.set(padId, audio);
     }
 
@@ -263,10 +401,30 @@ export default function App() {
 
         <div className="mb-6">
           {currentPanel === 1 && playingAudio1 && currentPad1 && (
-            <Player audio={playingAudio1.audio} fileName={currentPad1.fileName || ''} onClose={() => handleClosePlayer(1)} />
+            <Player
+              audio={playingAudio1.audio}
+              fileName={currentPad1.fileName || ''}
+              onClose={() => handleClosePlayer(1)}
+              isPlayingAll={isPlayingAll1}
+              onTogglePlayAll={() => handleTogglePlayAll(1)}
+              onPlayAllNext={() => handlePlayAllNext(1)}
+              onPlayAllPrev={() => handlePlayAllPrev(1)}
+              playAllQueueCount={getQueueForPanel(1).length}
+              currentPlayAllIndex={playAllIndex1}
+            />
           )}
           {currentPanel === 2 && playingAudio2 && currentPad2 && (
-            <Player audio={playingAudio2.audio} fileName={currentPad2.fileName || ''} onClose={() => handleClosePlayer(2)} />
+            <Player
+              audio={playingAudio2.audio}
+              fileName={currentPad2.fileName || ''}
+              onClose={() => handleClosePlayer(2)}
+              isPlayingAll={isPlayingAll2}
+              onTogglePlayAll={() => handleTogglePlayAll(2)}
+              onPlayAllNext={() => handlePlayAllNext(2)}
+              onPlayAllPrev={() => handlePlayAllPrev(2)}
+              playAllQueueCount={getQueueForPanel(2).length}
+              currentPlayAllIndex={playAllIndex2}
+            />
           )}
         </div>
 
