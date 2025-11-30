@@ -13,6 +13,9 @@ const GRADIENT_COLORS = [
   'bg-gradient-to-br from-rose-500 to-pink-600',
   'bg-gradient-to-br from-blue-500 to-cyan-600',
   'bg-gradient-to-br from-blue-400 to-blue-600',
+  'bg-gradient-to-br from-emerald-300 to-teal-400',
+  'bg-gradient-to-br from-fuchsia-400 to-indigo-500',
+  'bg-gradient-to-br from-amber-400 to-rose-500',
   'bg-gradient-to-br from-fuchsia-500 to-pink-600',
   'bg-gradient-to-br from-emerald-400 to-green-500',
   'bg-gradient-to-br from-amber-400 to-orange-500',
@@ -33,10 +36,13 @@ const PANEL_2_COLORS = [
   'bg-gradient-to-br from-violet-500 to-purple-600',
   'bg-gradient-to-br from-sky-500 to-blue-600',
   'bg-gradient-to-br from-lime-400 to-green-500',
+  'bg-gradient-to-br from-rose-400 to-pink-500',
+  'bg-gradient-to-br from-sky-400 to-indigo-500',
+  'bg-gradient-to-br from-amber-300 to-orange-500',
 ];
 
 function defaultPads(start = 0, colors = GRADIENT_COLORS): AudioPadData[] {
-  return Array.from({ length: 12 }, (_, i) => ({
+  return Array.from({ length: 15 }, (_, i) => ({
     id: start + i,
     file: null,
     fileName: null,
@@ -48,7 +54,7 @@ function defaultPads(start = 0, colors = GRADIENT_COLORS): AudioPadData[] {
 export default function App() {
   const [currentPanel, setCurrentPanel] = useState<number>(1);
   const [pads1, setPads1] = useState<AudioPadData[]>(() => defaultPads(0, GRADIENT_COLORS));
-  const [pads2, setPads2] = useState<AudioPadData[]>(() => defaultPads(12, PANEL_2_COLORS));
+  const [pads2, setPads2] = useState<AudioPadData[]>(() => defaultPads(15, PANEL_2_COLORS));
   const [playingAudio1, setPlayingAudio1] = useState<PlayingAudio | null>(null);
   const [playingAudio2, setPlayingAudio2] = useState<PlayingAudio | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -74,7 +80,7 @@ export default function App() {
         setPads1((prev) => {
           const next = [...prev];
           for (const rec of stored) {
-            if (rec.id >= 0 && rec.id < 12 && rec.blob) {
+            if (rec.id >= 0 && rec.id < 15 && rec.blob) {
               const url = URL.createObjectURL(rec.blob);
               const file = rec.fileName ? new File([rec.blob], rec.fileName) : null;
               next[rec.id] = { ...next[rec.id], file: file as File | null, fileName: rec.fileName, audioUrl: url };
@@ -86,8 +92,8 @@ export default function App() {
         setPads2((prev) => {
           const next = [...prev];
           for (const rec of stored) {
-            if (rec.id >= 12 && rec.id < 24 && rec.blob) {
-              const idx = rec.id - 12;
+            if (rec.id >= 15 && rec.id < 30 && rec.blob) {
+              const idx = rec.id - 15;
               const url = URL.createObjectURL(rec.blob);
               const file = rec.fileName ? new File([rec.blob], rec.fileName) : null;
               next[idx] = { ...next[idx], file: file as File | null, fileName: rec.fileName, audioUrl: url };
@@ -271,7 +277,7 @@ export default function App() {
     }
 
     setPads1((prev) => {
-      if (padId < 12) {
+      if (padId < 15) {
         const next = [...prev];
         const idx = padId;
         if (next[idx]?.audioUrl) {
@@ -284,9 +290,9 @@ export default function App() {
     });
 
     setPads2((prev) => {
-      if (padId >= 12) {
+      if (padId >= 15) {
         const next = [...prev];
-        const idx = padId - 12;
+        const idx = padId - 15;
         if (next[idx]?.audioUrl) {
           try { URL.revokeObjectURL(next[idx].audioUrl!); } catch {}
         }
@@ -315,7 +321,7 @@ export default function App() {
   const handlePlayPause = (padId: number) => {
     const pad = pads1.concat(pads2).find((p) => p.id === padId);
     if (!pad || !pad.audioUrl) return;
-    const isPanel1 = padId < 12;
+    const isPanel1 = padId < 15;
     const playingAudio = isPanel1 ? playingAudio1 : playingAudio2;
     const setPlaying = isPanel1 ? setPlayingAudio1 : setPlayingAudio2;
 
@@ -330,7 +336,7 @@ export default function App() {
       // Ensure audio does NOT repeat automatically — play once and stop at end
       audio.loop = false;
       // When audio ends, clear the playing state for the current panel unless Play-All is active
-      const isPanel1 = padId < 12;
+      const isPanel1 = padId < 15;
       audio.addEventListener('ended', () => {
         const active = isPanel1 ? isPlayingAllRef1.current : isPlayingAllRef2.current;
         if (!active) setPlaying(null);
@@ -371,7 +377,7 @@ export default function App() {
           <div className="flex items-center justify-center gap-3 mb-2">
             <div className="flex items-center gap-3">
               <MusicIcon size={40} className="text-cyan-400" />
-              <h1 className="text-4xl font-bold">TeatroPad</h1>
+              <h1 className="text-4xl font-bold">teatro pad</h1>
             </div>
             <div className="flex items-center">
               <div
@@ -447,6 +453,15 @@ export default function App() {
         <div className="text-center text-gray-500 text-xs">
           <p>Mantén presionado cualquier pad para cargar audio</p>
         </div>
+
+        <footer className="mt-6 text-center text-gray-400 text-sm">
+          <p>
+            creado por :{' '}
+            <a href="https://instagram.com/douglasdonaire" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+              @douglasdonaire
+            </a>
+          </p>
+        </footer>
       </div>
     </div>
   );
