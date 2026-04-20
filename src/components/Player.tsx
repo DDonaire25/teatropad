@@ -5,29 +5,20 @@ interface PlayerProps {
   audio: HTMLAudioElement | null;
   fileName: string;
   onClose: () => void;
-  // Play All integration (optional)
-  isPlayingAll?: boolean;
-  onTogglePlayAll?: () => void;
+  isPisadorActive?: boolean;
+  onTogglePisador?: () => void;
   onPlayAllNext?: () => void;
   onPlayAllPrev?: () => void;
-  playOnlyCurrentPanel?: boolean;
-  setPlayOnlyCurrentPanel?: (v: boolean) => void;
-  playAllQueueCount?: number;
-  currentPlayAllIndex?: number | null;
 }
 
 export default function Player({
   audio,
   fileName,
   onClose,
-  isPlayingAll,
-  onTogglePlayAll,
+  isPisadorActive,
+  onTogglePisador,
   onPlayAllNext,
   onPlayAllPrev,
-  playOnlyCurrentPanel,
-  setPlayOnlyCurrentPanel,
-  playAllQueueCount,
-  currentPlayAllIndex,
 }: PlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -122,13 +113,23 @@ export default function Player({
           <span className="text-xs text-gray-400 w-10">{formatTime(duration)}</span>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto">
+          <button
+            onClick={() => onPlayAllPrev && onPlayAllPrev()}
+            disabled={!onPlayAllPrev}
+            aria-label="Anterior"
+            className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <SkipBack size={18} />
+          </button>
+
           <button
             onClick={handlePlayPause}
-            className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-2 sm:p-3 transition-colors"
+            className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-3 transition-colors"
           >
             {isPlaying ? <Pause size={18} fill="white" /> : <Play size={18} fill="white" />}
           </button>
+
           <button
             onClick={handleStop}
             className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-3 transition-colors"
@@ -136,55 +137,25 @@ export default function Player({
             <Square size={20} fill="white" />
           </button>
 
-          {/* Play All controls (optional) */}
-          {typeof onTogglePlayAll === 'function' && (
-            <div className="flex items-center gap-2 ml-3">
-              <button
-                onClick={() => onPlayAllPrev && onPlayAllPrev()}
-                aria-label="Anterior"
-                className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 transition-colors"
-              >
-                <SkipBack size={16} />
-              </button>
+          <button
+            onClick={() => onPlayAllNext && onPlayAllNext()}
+            disabled={!onPlayAllNext}
+            aria-label="Siguiente"
+            className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <SkipForward size={18} />
+          </button>
 
-              <button
-                onClick={() => onTogglePlayAll && onTogglePlayAll()}
-                aria-label="Reproducir todo"
-                className={`bg-slate-700 hover:bg-slate-600 text-white rounded-full p-2 transition-colors ${isPlayingAll ? 'bg-cyan-500' : ''}`}
-              >
-                {isPlayingAll ? <Pause size={16} /> : <Play size={16} />}
-              </button>
-
-              <button
-                onClick={() => onPlayAllNext && onPlayAllNext()}
-                aria-label="Siguiente"
-                className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 transition-colors"
-              >
-                <SkipForward size={16} />
-              </button>
-
-              <div className="text-xs text-gray-400 ml-2 text-center sm:text-left">
-                {typeof currentPlayAllIndex === 'number' && typeof playAllQueueCount === 'number'
-                  ? `${currentPlayAllIndex + 1}/${playAllQueueCount}`
-                  : `${playAllQueueCount || 0} items`}
-              </div>
-
-              <div className="ml-3 flex items-center gap-2">
-                <button
-                  onClick={() => setPlayOnlyCurrentPanel && setPlayOnlyCurrentPanel(false)}
-                  className={`px-2 py-0.5 rounded-md text-xs transition ${!Boolean(playOnlyCurrentPanel) ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
-                >
-                  <span className="whitespace-nowrap">Todos</span>
-                </button>
-                <button
-                  onClick={() => setPlayOnlyCurrentPanel && setPlayOnlyCurrentPanel(true)}
-                  className={`px-2 py-0.5 rounded-md text-xs transition ${Boolean(playOnlyCurrentPanel) ? 'bg-slate-700 text-white' : 'bg-transparent text-gray-400 hover:bg-slate-700'}`}
-                >
-                  <span className="whitespace-nowrap">Solo panel</span>
-                </button>
-              </div>
-            </div>
-          )}
+          <button
+            onClick={() => onTogglePisador && onTogglePisador()}
+            className={`bg-gray-700 hover:bg-gray-600 text-emerald-300 rounded-full p-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isPisadorActive ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : ''}`}
+            aria-label="Pisador"
+            title="Pisador: reducir el volumen para usar como cortina"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" className="block">
+              <path d="M1 4h16v10H1V4Zm3 0v2.8L9 10.5l5-3.7V4H4Z" fill="#34d399" fillRule="evenodd" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

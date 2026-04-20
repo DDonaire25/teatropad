@@ -1,8 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
-import { Music as MusicIcon } from 'lucide-react';
 import AudioPad from './components/AudioPad';
 import Player from './components/Player';
 import { AudioPadData, PlayingAudio } from './types/audio';
+
+function AppLogo() {
+  return (
+    <svg viewBox="0 0 96 96" className="w-12 h-12" aria-hidden="true">
+      <rect x="0" y="0" width="96" height="96" rx="22" fill="#1f1b45" />
+      <rect x="10" y="10" width="76" height="76" rx="20" fill="#27235f" />
+      <rect x="18" y="18" width="14" height="14" rx="4" fill="#38bdf8" />
+      <rect x="36" y="18" width="14" height="14" rx="4" fill="#fb923c" />
+      <rect x="54" y="18" width="14" height="14" rx="4" fill="#facc15" />
+      <rect x="72" y="18" width="14" height="14" rx="4" fill="#22c55e" />
+      <rect x="18" y="36" width="14" height="14" rx="4" fill="#fb923c" />
+      <rect x="36" y="36" width="14" height="14" rx="4" fill="#facc15" />
+      <rect x="54" y="36" width="14" height="14" rx="4" fill="#22c55e" />
+      <rect x="72" y="36" width="14" height="14" rx="4" fill="#a855f7" />
+      <rect x="18" y="54" width="14" height="14" rx="4" fill="#38bdf8" />
+      <rect x="36" y="54" width="14" height="14" rx="4" fill="#22c55e" />
+      <rect x="54" y="54" width="14" height="14" rx="4" fill="#38bdf8" />
+      <rect x="72" y="54" width="14" height="14" rx="4" fill="#fb7185" />
+      <rect x="18" y="72" width="14" height="14" rx="4" fill="#f97316" />
+      <rect x="36" y="72" width="14" height="14" rx="4" fill="#22c55e" />
+      <rect x="54" y="72" width="14" height="14" rx="4" fill="#38bdf8" />
+      <rect x="72" y="72" width="14" height="14" rx="4" fill="#ef4444" />
+      <path d="M12 58 C22 50 32 74 44 54 C56 34 64 74 84 50" fill="none" stroke="#ecfeff" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 import { savePad, getAllPads, deletePad } from './lib/persistence';
 
 const GRADIENT_COLORS = [
@@ -60,12 +85,12 @@ export default function App() {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const audioRefs = useRef<Map<number, HTMLAudioElement>>(new Map());
   // Play-all state per panel
-  const [isPlayingAll1, setIsPlayingAll1] = useState(false);
-  const [isPlayingAll2, setIsPlayingAll2] = useState(false);
   const isPlayingAllRef1 = useRef(false);
   const isPlayingAllRef2 = useRef(false);
   const [playAllIndex1, setPlayAllIndex1] = useState<number | null>(null);
   const [playAllIndex2, setPlayAllIndex2] = useState<number | null>(null);
+  const [pisador1, setPisador1] = useState(false);
+  const [pisador2, setPisador2] = useState(false);
 
   const pads = currentPanel === 1 ? pads1 : pads2;
 
@@ -148,11 +173,9 @@ export default function App() {
 
   const stopPlayAll = (panel: number) => {
     if (panel === 1) {
-      setIsPlayingAll1(false);
       isPlayingAllRef1.current = false;
       setPlayAllIndex1(null);
     } else {
-      setIsPlayingAll2(false);
       isPlayingAllRef2.current = false;
       setPlayAllIndex2(null);
     }
@@ -166,14 +189,17 @@ export default function App() {
     const padId = queue[index];
     const isPanel1 = panel === 1;
     const setPlaying = isPanel1 ? setPlayingAudio1 : setPlayingAudio2;
+    const pisadorActive = isPanel1 ? pisador1 : pisador2;
 
     // create/play the audio for padId
     let audio = audioRefs.current.get(padId);
     const pad = (isPanel1 ? pads1 : pads2).find((p) => p.id === padId)!;
     if (!audio) {
       audio = new Audio(pad.audioUrl!);
-      audio.loop = false;
+      audio.volume = pisadorActive ? 0.25 : 1.0;
       audioRefs.current.set(padId, audio);
+    } else {
+      audio.volume = pisadorActive ? 0.25 : 1.0;
     }
 
     // Attach a one-shot ended handler to move to next item if play-all is still active
@@ -211,41 +237,6 @@ export default function App() {
 
     if (isPanel1) setPlayAllIndex1(index);
     else setPlayAllIndex2(index);
-  };
-
-  const handleTogglePlayAll = (panel: number) => {
-    const isPanel1 = panel === 1;
-    const active = isPanel1 ? isPlayingAll1 : isPlayingAll2;
-    if (active) {
-      stopPlayAll(panel);
-      // pause current audio
-      const playing = isPanel1 ? playingAudio1 : playingAudio2;
-      if (playing) {
-        playing.audio.pause();
-      }
-      return;
-    }
-
-    const queue = getQueueForPanel(panel);
-    if (!queue || queue.length === 0) return; // nothing to play
-
-    // determine start index: prefer currently playing pad if exists in queue, else 0
-    const currentlyPlaying = panel === 1 ? playingAudio1?.padId : playingAudio2?.padId;
-    let startIndex = 0;
-    if (typeof currentlyPlaying === 'number') {
-      const idx = queue.indexOf(currentlyPlaying);
-      if (idx >= 0) startIndex = idx;
-    }
-
-    if (isPanel1) {
-      setIsPlayingAll1(true);
-      isPlayingAllRef1.current = true;
-    } else {
-      setIsPlayingAll2(true);
-      isPlayingAllRef2.current = true;
-    }
-
-    playQueueAt(panel, startIndex);
   };
 
   const handlePlayAllNext = (panel: number) => {
@@ -322,6 +313,7 @@ export default function App() {
     const pad = pads1.concat(pads2).find((p) => p.id === padId);
     if (!pad || !pad.audioUrl) return;
     const isPanel1 = padId < 15;
+    const pisadorActive = isPanel1 ? pisador1 : pisador2;
     const playingAudio = isPanel1 ? playingAudio1 : playingAudio2;
     const setPlaying = isPanel1 ? setPlayingAudio1 : setPlayingAudio2;
 
@@ -345,9 +337,12 @@ export default function App() {
     }
 
     if (playingAudio?.padId === padId) {
-      if (audio.paused) audio.play();
-      else audio.pause();
+      if (audio.paused) {
+        audio.volume = pisadorActive ? 0.25 : 1.0;
+        audio.play();
+      } else audio.pause();
     } else {
+      audio.volume = pisadorActive ? 0.25 : 1.0;
       audio.play();
       setPlaying({ padId, audio });
     }
@@ -367,6 +362,27 @@ export default function App() {
     }
   };
 
+  const handleTogglePisador = (panel: number) => {
+    const isPanel1 = panel === 1;
+    if (isPanel1) {
+      setPisador1((prev) => {
+        const next = !prev;
+        if (playingAudio1) {
+          playingAudio1.audio.volume = next ? 0.25 : 1.0;
+        }
+        return next;
+      });
+    } else {
+      setPisador2((prev) => {
+        const next = !prev;
+        if (playingAudio2) {
+          playingAudio2.audio.volume = next ? 0.25 : 1.0;
+        }
+        return next;
+      });
+    }
+  };
+
   const currentPad1 = playingAudio1 ? pads1.find((p) => p.id === playingAudio1.padId) : null;
   const currentPad2 = playingAudio2 ? pads2.find((p) => p.id === playingAudio2.padId) : null;
 
@@ -376,8 +392,8 @@ export default function App() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <div className="flex items-center gap-3">
-              <MusicIcon size={40} className="text-cyan-400" />
-              <h1 className="text-4xl font-bold">teatro pad</h1>
+              <AppLogo />
+              <h1 className="text-4xl font-bold">Musicalizador</h1>
             </div>
             <div className="flex items-center">
               <div
@@ -391,7 +407,7 @@ export default function App() {
               </div>
             </div>
           </div>
-          <p className="text-gray-400 text-sm">Mantén presionado para cargar audio • Click para reproducir</p>
+          <p className="text-gray-400 text-sm">Gestiona tus audios y efectos de sonido. Práctico y sencillo.</p>
 
           {/* moved status dot next to title */}
         </div>
@@ -411,12 +427,10 @@ export default function App() {
               audio={playingAudio1.audio}
               fileName={currentPad1.fileName || ''}
               onClose={() => handleClosePlayer(1)}
-              isPlayingAll={isPlayingAll1}
-              onTogglePlayAll={() => handleTogglePlayAll(1)}
+              isPisadorActive={pisador1}
+              onTogglePisador={() => handleTogglePisador(1)}
               onPlayAllNext={() => handlePlayAllNext(1)}
               onPlayAllPrev={() => handlePlayAllPrev(1)}
-              playAllQueueCount={getQueueForPanel(1).length}
-              currentPlayAllIndex={playAllIndex1}
             />
           )}
           {currentPanel === 2 && playingAudio2 && currentPad2 && (
@@ -424,12 +438,10 @@ export default function App() {
               audio={playingAudio2.audio}
               fileName={currentPad2.fileName || ''}
               onClose={() => handleClosePlayer(2)}
-              isPlayingAll={isPlayingAll2}
-              onTogglePlayAll={() => handleTogglePlayAll(2)}
+              isPisadorActive={pisador2}
+              onTogglePisador={() => handleTogglePisador(2)}
               onPlayAllNext={() => handlePlayAllNext(2)}
               onPlayAllPrev={() => handlePlayAllPrev(2)}
-              playAllQueueCount={getQueueForPanel(2).length}
-              currentPlayAllIndex={playAllIndex2}
             />
           )}
         </div>

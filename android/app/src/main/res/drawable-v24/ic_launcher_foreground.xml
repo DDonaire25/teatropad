@@ -1,19 +1,42 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportHeight="108"
-    android:viewportWidth="108">
+    android:viewportWidth="108"
+    android:viewportHeight="108">
 
-    <!-- Foreground branding for "teatro pad" - simple TP geometric logo -->
-
-    <!-- Big rounded 'T' bar -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M14,18h40v12H14zM34,28h12v56H34z" />
-
-    <!-- 'P' shape: stem + round-ish loop (approximated with rounded capsule) -->
+        android:fillColor="#1f1b45"
+        android:pathData="M0,0h108v108h-108z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M62,28h10v56H62zM74,36c0,0 14,-1 14,12 0,13 -14,14 -14,14h-6v-8h6c2,0 6,-1 6,-6 0,-6 -6,-6 -6,-6h-6v-12h6z" />
+        android:fillColor="#27235f"
+        android:pathData="M6,6h96v96h-96z" />
 
+    <!-- Grid pads -->
+    <path android:fillColor="#38bdf8" android:pathData="M18,18 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#fb923c" android:pathData="M36,18 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#facc15" android:pathData="M54,18 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#22c55e" android:pathData="M72,18 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+
+    <path android:fillColor="#fb923c" android:pathData="M18,36 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#facc15" android:pathData="M36,36 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#22c55e" android:pathData="M54,36 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#a855f7" android:pathData="M72,36 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+
+    <path android:fillColor="#38bdf8" android:pathData="M18,54 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#22c55e" android:pathData="M36,54 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#38bdf8" android:pathData="M54,54 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#fb7185" android:pathData="M72,54 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+
+    <path android:fillColor="#f97316" android:pathData="M18,72 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#22c55e" android:pathData="M36,72 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#38bdf8" android:pathData="M54,72 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#ef4444" android:pathData="M72,72 h14 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z" />
+
+    <path
+        android:fillAlpha="0"
+        android:strokeColor="#ecfeff"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M14,54 C22,46 30,74 44,52 C58,30 66,70 86,50" />
 </vector>

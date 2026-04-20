@@ -23,17 +23,6 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            // Use signing configuration when keystore properties were supplied
-            if (keystorePropertiesFile.exists()) {
-                signingConfig signingConfigs.release
-            }
-        }
-    }
-
     // Configure signingConfigs using android/keystore.properties when present.
     signingConfigs {
         release {
@@ -42,6 +31,17 @@ android {
                 storePassword = keystoreProperties['storePassword']
                 keyAlias = keystoreProperties['keyAlias']
                 keyPassword = keystoreProperties['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Use signing configuration when keystore properties were supplied
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
             }
         }
     }
